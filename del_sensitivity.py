@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-""" Script to compare the performance (sensitivity) of a structural variant calling tool, specifically for deletions"""
+"""
+ Script to compare the performance (sensitivity) of a structural variant calling tool, specifically for deletions
+"""
 import sys,os,re
 import argparse,subprocess
 
