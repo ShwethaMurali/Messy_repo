@@ -1,3 +1,0 @@
-
-
-The VCF parser is worrisome. I think it would be a lot clearer to start with bedfiles because they are more stable. 
