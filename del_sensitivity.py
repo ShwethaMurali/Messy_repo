@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-"""
- Script to compare the performance (sensitivity) of a structural variant calling tool, specifically for deletions
-"""
+""" Script to compare the performance (sensitivity) of a structural variant calling tool, specifically for deletions"""
 import sys,os,re
 import argparse,subprocess
 
@@ -38,28 +36,31 @@ def vcf_to_bed(fin):
 			header_names = lines.strip("#").split('\t')
 			for i in header_names: masterlist[i] = {}
 		else:	
-			CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO,FORMAT,SAMPLE = lines.strip().split('\t')	
+			CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO = lines.strip().split('\t')[0:8]
 			inside_info = {}
-			
-			#print INFO
+				
 			expLen = re.compile("^SVLEN") #regular expression for svlen field 
 			expEnd = re.compile("^END=") #regex
-
-			for i in INFO.strip().split(";"): 
-				if re.match(expLen,i): SIZE  = int(i.strip().split("=")[1])
-				if re.match(expEnd,i) : END = int(i.strip().split("=")[1]) 	
+			
 			START = int(POS) 
 			SVTYPE = ALT.strip(">").strip("<") #check
-	
+			END,SIZE = "",""
+
+			for i in INFO.strip().split(";"): 
+				if re.match(expEnd,i) : END = int(i.strip().split("=")[1]) 	
+				if re.match(expLen,i): SIZE  = abs(int(i.strip().split("=")[1])) #this is crucial, if the abs val is not taken, none od the deletions will be counted
+				
+			if SIZE == "" and END != "" : SIZE =  END - START + 1
+			elif SIZE == "" and END == "":  print "missing info in vcf file!"	
 			if SVTYPE == svtype and CHROM in chromosomes:
 				if SIZE >= size_min and SIZE <= size_max:
 					if SIZE%size_bin == 0 : bin_id = SIZE/size_bin -1  #size slices
 					else: bin_id = SIZE/size_bin	
 					bedentry = (CHROM,START,END) #tuple	
 					bed_dict[bin_id].append(bedentry)
-				else: continue 	
-					
-	return bed_dict 
+				else: continue 		
+	return bed_dict
+	 
 
 def plot_sensitivity(plot_container,tru_title,figno):
 	"""
@@ -118,7 +119,7 @@ def compare_calls(bedlist1,bedlist2):
 		q.close()			
 		
 		if os.path.getsize(bedfile1.name) == 0 or os.path.getsize(bedfile2.name) == 0:
-			print "Truth/test set has no calls!\n"
+			#print "Truth/test set has no calls!\n"
 			exists = 0
 			x.append(((size_bin*bin)+size_bin)),y.append(0)	
  
@@ -137,11 +138,16 @@ def compare_calls(bedlist1,bedlist2):
 			wc_command = ("cat {0} | cut -f 1,2,3 | sort | uniq | wc -l".format(results.name)) 
 			wc_count = subprocess.check_output(wc_command, shell=True) 
 			sensitivity = (float(wc_count))/float(len(open(bedfile1.name).readlines()))	
+
+			#roc start
+			#fp = 
+			#fpr = 		#fp/fp+fn
+
 			x.append(((size_bin*bin))),y.append(sensitivity)	
 
 	xy_tuple.append(x)
 	xy_tuple.append(y)
-	os.system("rm {0} {1} {2}".format(bedfile1.name,bedfile2.name,results.name)) #cleaning up temp file	
+	#os.system("rm {0} {1} {2}".format(bedfile1.name,bedfile2.name,results.name)) #cleaning up temp file		
 	return xy_tuple
 	
 def run (list_tru,list_tes):
@@ -190,7 +196,7 @@ def ParseArgs():
 	parser.add_argument("--size-min", dest = "size_min", type = int, default =1, required = False,\
 			help = "Floor size of the calls in bp to be considered; default = 1")
 	parser.add_argument("--size-max" , dest = "size_max", type = int, default = 3000, required = False,\
-			help = "Ceiling size of the calls in bp to be considered ; default = 3000")
+			help = "Ceiling size of the calls in bp to be considered; default = 3000")
 	parser.add_argument("--size-bin", dest = "size_bin", type = int, default = 500, required = False,\
 			help = "size of the bins for plotting; default = 500")
 	parser.add_argument("--pct-ovl", dest = "pct_ovl", type = float, default = 0.5, required = False,\
@@ -205,6 +211,7 @@ if __name__ == '__main__':
 	global size_min,size_max,size_bin,num_bins,pct_ovl
 	size_min, size_max, size_bin, pct_ovl   = args.size_min, args.size_max, args.size_bin, args.pct_ovl
 	num_bins = (size_max - size_min + 1 )/size_bin	
-
-	print size_min, size_max, size_bin, pct_ovl, num_bins		
+	if pct_ovl > 1.0: pct_ovl = float(pct_ovl/100) #Incase user inputs whole percentages 
+	
 	run(truth_list,test_list)
+	print "\nDone!"
