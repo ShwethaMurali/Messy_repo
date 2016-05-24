@@ -1,5 +1,5 @@
 In this example, there is one truth file and four test files provided.
-You can find these in the tarball 'sample_vcf.tgz' 
+You can find these in the tarball 'sample_vcfs.tgz' 
 
 For every truth file, the script draws a new plot.
 In this case, since there is one truth file, output is a single plot.
