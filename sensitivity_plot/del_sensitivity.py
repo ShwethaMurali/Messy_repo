@@ -11,49 +11,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tempfile import NamedTemporaryFile 
 
+expLen = re.compile("^SVLEN") #regular expression for svlen field 
+expEnd = re.compile("^END=") #regex
+
 def vcf_to_bed(fin):
 	"""
 	reducing vcf to bed coordinates;
 	returns a dict of bed coordinates, categorized by bin   
-	"""	
+	"""
 
 	bed_dict = {} 
 	svtype = "DEL"
 	for bins in range(0,num_bins): bed_dict[bins] = [] #initializing 
-
-	chromosomes = list ((str(a) for a in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]))
-	masterlist = {}
+	chromosomes = list(str(x) for x in  range(1,23))
 	
-	for lines in open(fin):
-	
-		if lines.startswith("##"): #info header
-			if lines.startswith("##program="):
-				prog_name = lines.strip().split('=')[1]
-			if lines.startswith("##source="):
-				source = lines.strip().split('/')[-1]
+	for lines in open(fin):	
+		if lines.startswith("#"): #info header
 			continue
-		elif lines.startswith("#"): #useful headers
-			header_names = lines.strip("#").split('\t')
-			for i in header_names: masterlist[i] = {}
 		else:	
 			CHROM,POS,ID,REF,ALT,QUAL,FILTER,INFO = lines.strip().split('\t')[0:8]
 			inside_info = {}
-				
-			expLen = re.compile("^SVLEN") #regular expression for svlen field 
-			expEnd = re.compile("^END=") #regex
-			
 			START = int(POS) 
-			SVTYPE = ALT.strip(">").strip("<") #check
+			SVTYPE = ALT.strip(">").strip("<")
 			END,SIZE = "",""
 
 			for i in INFO.strip().split(";"): 
 				if re.match(expEnd,i) : END = int(i.strip().split("=")[1]) 	
-				if re.match(expLen,i): SIZE  = abs(int(i.strip().split("=")[1])) #this is crucial, if the abs val is not taken, none od the deletions will be counted
-				
+				if re.match(expLen,i): SIZE  = abs(int(i.strip().split("=")[1]))
+				#always abs value for deletion
+
 			if SIZE == "" and END != "" : SIZE =  END - START + 1
 			elif SIZE == "" and END == "":  print "missing info in vcf file!"	
-			if SVTYPE == svtype and CHROM in chromosomes:
+			
+			if SVTYPE == svtype and CHROM in chromosomes:	
 				if SIZE >= size_min and SIZE <= size_max:
+					#binning by size
 					if SIZE%size_bin == 0 : bin_id = SIZE/size_bin -1  #size slices
 					else: bin_id = SIZE/size_bin	
 					bedentry = (CHROM,START,END) #tuple	
@@ -67,7 +59,7 @@ def plot_sensitivity(plot_container,tru_title,figno):
 	Plotting sensitivity. Number of plots depends on number of truth sets provided.
 	One plot per truth set.
 	"""
-	plt.figure(figno)	
+	plt.figure(figno)
 
 	colours = list('byrk') + ['MediumSpringGreen','Sienna','Purple','Khaki','SlateGray','Green'] 
 	plt.gca().set_color_cycle(colours)
@@ -92,7 +84,7 @@ def compare_calls(bedlist1,bedlist2):
 	"""
 	compare each chunk separately, each comparision yeilds a datapoint in the plot
 	"""
-	
+
 	xy_tuple = [] # populate these lists with x,y data points 
 	portion_calls = 0.0	
 	x,y = [0],[0]	
@@ -127,7 +119,7 @@ def compare_calls(bedlist1,bedlist2):
 			results = NamedTemporaryFile(suffix=".bed", delete=False)
     			results.close()
 			
-			#bedtools for doing recirocal overlap between truth and test calls 
+			#bedtools for doing reciprocal overlap between truth and test calls 
 			bedtools = "bedtools"  			
 			bedtools_check =  os.system("{0} intersect -wa -wb -a {1} -b {2} -f 0.5 -r > {3} "\
 					.format(bedtools,bedfile1.name,bedfile2.name,results.name))
@@ -138,11 +130,6 @@ def compare_calls(bedlist1,bedlist2):
 			wc_command = ("cat {0} | cut -f 1,2,3 | sort | uniq | wc -l".format(results.name)) 
 			wc_count = subprocess.check_output(wc_command, shell=True) 
 			sensitivity = (float(wc_count))/float(len(open(bedfile1.name).readlines()))	
-
-			#roc start
-			#fp = 
-			#fpr = 		#fp/fp+fn
-
 			x.append(((size_bin*bin))),y.append(sensitivity)	
 
 	xy_tuple.append(x)
@@ -157,26 +144,29 @@ def run (list_tru,list_tes):
 	"""
 
 	bed_chunk_tru,bed_chunk_tes = {},{} #containers for the bed entries
-
+	
 	for invcf in list_tes:
+		print "\nExtracting bed coordinates from ",invcf
 		vcf_name = invcf.strip().split("/")[-1] #making sure you separate out the file name from the path
 		bed_chunk_tes[vcf_name] = vcf_to_bed(invcf.strip()) 
 		#example: bed_chunk_tes[vcf1] = {bin0:[[1 100 20],[5 30 10], ..],bin1:[[..]}
 	
 	for invcf in list_tru:
+		print "\nExtracting bed coordinates from ",invcf
 		vcf_name = invcf.strip().split("/")[-1]	
 		bed_chunk_tru[vcf_name] = vcf_to_bed(invcf.strip())
 	
 	figno = 0 #figure numbers for matplotlib	
 	for vcfid1 in list_tru:
-	
 		vid1 = vcfid1.strip().split("/")[-1].strip()
 		plot_container = {}
-		for vcfid2 in list_tes:	
-		 	print "comaparing",vcfid1,vcfid2 	
+		for vcfid2 in list_tes:	 
 			vid2 = vcfid2.strip().split("/")[-1].strip()
-			plot_data = compare_calls(bed_chunk_tru[vid1],bed_chunk_tes[vid2]) #intersect step to generate data points  
+
+			print ("\nIntersecting calls from %s,%s" %(vid1,vid2))
+			plot_data = compare_calls(bed_chunk_tru[vid1],bed_chunk_tes[vid2])
 			plot_container[vid2] = plot_data 
+		print "\nPlotting"
 		figno = figno + 1	
 		plot_sensitivity(plot_container,vid1,figno) #plot data 
 
