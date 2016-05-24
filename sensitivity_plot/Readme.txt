@@ -56,10 +56,6 @@ optional arguments:
   --pct-ovl PCT_OVL    minimun percentage reciprocal overlap to keep; default
                        = 0.5
 
-NOTE: 
-Although the script can compare any two vcf files, it is recommended to compare vcfs produced by the
-same caller because false positive rates vary vastly between callers and so do SV sizes and predictions. 
-
 Example: 
 >python del_sensitivity.py -tru truth_set.vcf -tes NA11918_.vcf NA11894_.vcf
 NA06994_.vcf NA11992_.vcf --size-bin 200 --pct-ovl 0.3 
@@ -79,4 +75,3 @@ comaparing truth_set.vcf NA11918_.vcf
 Done!
 
 ****
-
