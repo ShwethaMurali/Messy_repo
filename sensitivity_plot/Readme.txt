@@ -58,20 +58,18 @@ optional arguments:
 
 Example: 
 >python del_sensitivity.py -tru truth_set.vcf -tes NA11918_.vcf NA11894_.vcf
-NA06994_.vcf NA11992_.vcf --size-bin 200 --pct-ovl 0.3 
+NA06994_.vcf NA11992_.vcf --size-bin 200 --pct-ovl 0.3
 
-Bin size is set to 200 and percent reciprocal overlap is set to 30% 
+Will create an output plot 'Sensitivity_summary_truth_set.vcf.png'
+with bin size=200, and min reciprocal overlap = 30% while considering all 
+deletions between the size range 1bp : 3kb
 
-Output: 
-For every truth file, the script draws a new plot. 
-In this case, since we only mentioned one, output is a single plot
-(Sensitivity_summary_truth_set.vcf.png)
+>python del_sensitivity.py -tru truth_set.vcf -tes NA11918_.vcf NA11894_.vcf
+NA06994_.vcf NA11992_.vcf 
 
-comaparing truth_set.vcf NA11992_.vcf
-comaparing truth_set.vcf NA06994_.vcf
-comaparing truth_set.vcf NA11894_.vcf
-comaparing truth_set.vcf NA11918_.vcf
+[default] Will create an output plot 'Sensitivity_summary_truth_set.vcf.png'
+with bin size=500, and min reciprocal overlap = 50% while considering all
+deletions between the size range 1bp : 3kb
 
-Done!
-
+For sample outputs, see example under 'test'
 ****
