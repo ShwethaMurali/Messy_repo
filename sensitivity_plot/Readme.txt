@@ -1,3 +1,5 @@
+del_sensitivity.py 
+
 This script was written to check the sensitivity of structural variant (SV) 
 callers, specifically for deletions. The script expects atleast one truth set 
 and atleast one test set of variants. Every file in the test set is compared
